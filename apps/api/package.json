@@ -1,0 +1,29 @@
+{
+  "name": "@aev/api",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy:dev": "wrangler deploy --env dev",
+    "deploy:prod": "wrangler deploy --env production",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate:local": "wrangler d1 migrations apply aev-db --local",
+    "db:migrate:prod": "wrangler d1 migrations apply aev-db --remote",
+    "db:seed:local": "tsx src/scripts/seed.ts --local",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@aev/shared": "workspace:*",
+    "@hono/zod-validator": "^0.4.3",
+    "drizzle-orm": "^0.39.3",
+    "hono": "^4.7.2",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250214.0",
+    "drizzle-kit": "^0.30.5",
+    "tsx": "^4.19.3",
+    "typescript": "^5.7.3",
+    "wrangler": "^3.111.0"
+  }
+}

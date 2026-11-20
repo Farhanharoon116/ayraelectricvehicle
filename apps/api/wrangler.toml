@@ -1,0 +1,66 @@
+name = "aev-api"
+main = "src/index.ts"
+compatibility_date = "2025-02-14"
+compatibility_flags = ["nodejs_compat"]
+
+# Serve web static assets built from apps/web
+assets = { directory = "../web/dist", binding = "ASSETS", not_found_handling = "single-page-application" }
+
+# Database binding for D1
+[[d1_databases]]
+binding = "DB"
+database_name = "aev-db-dev"
+database_id = "aev-db-dev-id"
+migrations_dir = "drizzle"
+
+# R2 bucket binding for CNIC photos and exports
+[[r2_buckets]]
+binding = "DOCUMENTS"
+bucket_name = "aev-documents-dev"
+
+# Cron Triggers
+# 1. Daily at 00:05 PKT (19:05 UTC): Daily installment-due & fine computation
+# 2. Nightly at 03:00 PKT (22:00 UTC): Nightly D1 export backup to R2
+[triggers]
+crons = ["5 19 * * *", "0 22 * * *"]
+
+[vars]
+ENVIRONMENT = "local"
+SESSION_SECRET = "dev-secret-session-key-change-in-prod"
+COOKIE_DOMAIN = ""
+
+# -----------------------------------------------------------------------------
+# Development Environment
+# -----------------------------------------------------------------------------
+[env.dev]
+name = "aev-api-dev"
+[[env.dev.d1_databases]]
+binding = "DB"
+database_name = "aev-db-dev"
+database_id = "aev-db-dev-id"
+migrations_dir = "drizzle"
+
+[[env.dev.r2_buckets]]
+binding = "DOCUMENTS"
+bucket_name = "aev-documents-dev"
+
+[env.dev.vars]
+ENVIRONMENT = "development"
+
+# -----------------------------------------------------------------------------
+# Production Environment
+# -----------------------------------------------------------------------------
+[env.production]
+name = "aev-api-prod"
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "aev-db-prod"
+database_id = "aev-db-prod-id"
+migrations_dir = "drizzle"
+
+[[env.production.r2_buckets]]
+binding = "DOCUMENTS"
+bucket_name = "aev-documents-prod"
+
+[env.production.vars]
+ENVIRONMENT = "production"
