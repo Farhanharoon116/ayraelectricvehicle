@@ -2,6 +2,12 @@ import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import { AppLayout } from "./components/layout/AppLayout";
+import { InventoryPage } from "./pages/InventoryPage";
+import { StockInPage } from "./pages/StockInPage";
+import { CatalogPage } from "./pages/CatalogPage";
+import { SuppliersPage } from "./pages/SuppliersPage";
+import { SettingsPage } from "./pages/SettingsPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -12,7 +18,7 @@ const queryClient = new QueryClient({
   },
 });
 
-function LoginPlaceholder() {
+function LoginView() {
   const { login, user } = useAuth();
   const [email, setEmail] = React.useState("owner@aevmotors.pk");
   const [password, setPassword] = React.useState("password123");
@@ -20,7 +26,7 @@ function LoginPlaceholder() {
   const [loading, setLoading] = React.useState(false);
 
   if (user) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/inventory" replace />;
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -60,7 +66,7 @@ function LoginPlaceholder() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2.5 bg-slate-700 rounded-lg border border-slate-600 focus:outline-none focus:border-brand-500 text-sm"
+              className="w-full px-3 py-2.5 bg-slate-700 rounded-lg border border-slate-600 focus:outline-none focus:border-brand-500 text-sm text-white"
               required
             />
           </div>
@@ -70,7 +76,7 @@ function LoginPlaceholder() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3 py-2.5 bg-slate-700 rounded-lg border border-slate-600 focus:outline-none focus:border-brand-500 text-sm"
+              className="w-full px-3 py-2.5 bg-slate-700 rounded-lg border border-slate-600 focus:outline-none focus:border-brand-500 text-sm text-white"
               required
             />
           </div>
@@ -83,38 +89,6 @@ function LoginPlaceholder() {
           </button>
         </form>
       </div>
-    </div>
-  );
-}
-
-function DashboardPlaceholder() {
-  const { user, logout } = useAuth();
-  return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
-      <header className="bg-white border-b px-4 py-3 flex items-center justify-between shadow-sm">
-        <div className="flex items-center space-x-2">
-          <span className="font-black text-brand-600 text-lg">AEV</span>
-          <span className="font-semibold text-slate-800">Showroom System</span>
-        </div>
-        <div className="flex items-center space-x-3 text-sm">
-          <span className="text-slate-600">
-            {user?.fullName} ({user?.role})
-          </span>
-          <button
-            onClick={logout}
-            className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md text-xs font-medium"
-          >
-            Logout
-          </button>
-        </div>
-      </header>
-
-      <main className="p-4 flex-1 max-w-4xl mx-auto w-full">
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 mb-4">
-          <h2 className="text-xl font-bold text-slate-900 mb-1">Welcome to AEV Management System</h2>
-          <p className="text-slate-600 text-sm">Phase 0 Scaffold Active. Cloudflare Workers + D1 + R2 + PWA.</p>
-        </div>
-      </main>
     </div>
   );
 }
@@ -143,15 +117,22 @@ export function App() {
       <AuthProvider>
         <BrowserRouter>
           <Routes>
-            <Route path="/login" element={<LoginPlaceholder />} />
+            <Route path="/login" element={<LoginView />} />
             <Route
-              path="/*"
+              path="/"
               element={
                 <ProtectedRoute>
-                  <DashboardPlaceholder />
+                  <AppLayout />
                 </ProtectedRoute>
               }
-            />
+            >
+              <Route index element={<Navigate to="/inventory" replace />} />
+              <Route path="inventory" element={<InventoryPage />} />
+              <Route path="stock-in" element={<StockInPage />} />
+              <Route path="catalog" element={<CatalogPage />} />
+              <Route path="suppliers" element={<SuppliersPage />} />
+              <Route path="settings" element={<SettingsPage />} />
+            </Route>
           </Routes>
         </BrowserRouter>
       </AuthProvider>

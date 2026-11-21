@@ -3,6 +3,10 @@ import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import type { AppContext, Env } from "./types";
 import { authRoutes } from "./routes/auth";
+import { settingsRoutes } from "./routes/settings";
+import { catalogRoutes } from "./routes/catalog";
+import { supplierRoutes } from "./routes/suppliers";
+import { unitRoutes } from "./routes/units";
 import { requireAuth } from "./middleware/auth";
 import { createDb } from "./db";
 import { installmentSchedules } from "@aev/shared";
@@ -42,12 +46,18 @@ app.get("/health", (c) => {
   });
 });
 
-// Mount Routes
+// Auth Routes (Public login + protected me/users)
 app.route("/api/auth", authRoutes);
 
-// Protected routes will be mounted in subsequent phases (catalog, units, sales, payments, settings, reports)
+// Protected Core Routes
 const protectedApi = new Hono<AppContext>();
 protectedApi.use("*", requireAuth);
+
+protectedApi.route("/settings", settingsRoutes);
+protectedApi.route("/catalog", catalogRoutes);
+protectedApi.route("/suppliers", supplierRoutes);
+protectedApi.route("/units", unitRoutes);
+
 app.route("/api", protectedApi);
 
 // Cloudflare Workers Scheduled Event (Cron triggers)
