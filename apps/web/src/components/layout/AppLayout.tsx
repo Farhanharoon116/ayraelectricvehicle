@@ -1,6 +1,7 @@
 import React from "react";
 import { Link, useLocation, Outlet } from "react-router-dom";
 import {
+  LayoutDashboard,
   Bike,
   PackagePlus,
   ShoppingCart,
@@ -13,6 +14,8 @@ import {
   User,
   Menu,
   X,
+  BarChart3,
+  ShieldAlert,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
@@ -24,6 +27,7 @@ export function AppLayout() {
   const isOwner = user?.role === "owner";
 
   const navItems = [
+    { name: "Dashboard", path: "/", icon: LayoutDashboard, exact: true },
     { name: "New Sale", path: "/sales/new", icon: ShoppingCart },
     { name: "Sales", path: "/sales", icon: FileText },
     { name: "Inventory", path: "/inventory", icon: Bike },
@@ -31,7 +35,21 @@ export function AppLayout() {
     { name: "Customers", path: "/customers", icon: Users },
     { name: "Catalog", path: "/catalog", icon: Layers },
     { name: "Suppliers", path: "/suppliers", icon: Truck },
-    ...(isOwner ? [{ name: "Settings", path: "/settings", icon: Settings }] : []),
+    ...(isOwner
+      ? [
+          { name: "Reports", path: "/reports", icon: BarChart3 },
+          { name: "Audit Logs", path: "/audit", icon: ShieldAlert },
+          { name: "Settings", path: "/settings", icon: Settings },
+        ]
+      : []),
+  ];
+
+  const mobileBottomNav = [
+    { name: "Home", path: "/", icon: LayoutDashboard, exact: true },
+    { name: "Sales", path: "/sales", icon: FileText },
+    { name: "Sell", path: "/sales/new", icon: ShoppingCart },
+    { name: "Units", path: "/inventory", icon: Bike },
+    { name: "Stock In", path: "/stock-in", icon: PackagePlus },
   ];
 
   return (
@@ -53,7 +71,9 @@ export function AppLayout() {
         <nav className="flex-1 p-3 space-y-1">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = location.pathname.startsWith(item.path);
+            const isActive = item.exact
+              ? location.pathname === item.path
+              : location.pathname.startsWith(item.path);
             return (
               <Link
                 key={item.path}
@@ -120,29 +140,80 @@ export function AppLayout() {
       {/* Mobile Dropdown Menu (Secondary links) */}
       {mobileMenuOpen && (
         <div className="md:hidden bg-slate-800 text-slate-200 border-b border-slate-700 px-4 py-3 space-y-2">
-          <div className="text-xs text-slate-400 pb-1 border-b border-slate-700">
-            Signed in as <span className="text-white font-medium">{user?.fullName}</span>
+          <div className="text-xs text-slate-400 pb-1 border-b border-slate-700 flex justify-between items-center">
+            <span>Signed in as <strong className="text-white">{user?.fullName}</strong></span>
+            <span className="text-[10px] uppercase font-bold text-brand-400">{user?.role}</span>
           </div>
-          {isOwner && (
+
+          <div className="grid grid-cols-2 gap-2 py-1">
             <Link
-              to="/settings"
+              to="/customers"
               onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center space-x-2 py-2 text-sm text-slate-200 hover:text-brand-400"
+              className="flex items-center space-x-2 p-2 rounded-lg text-xs text-slate-300 hover:bg-slate-700"
             >
-              <Settings className="w-4 h-4" />
-              <span>Showroom Settings</span>
+              <Users className="w-4 h-4 text-blue-400" />
+              <span>Customers</span>
             </Link>
-          )}
-          <button
-            onClick={() => {
-              setMobileMenuOpen(false);
-              logout();
-            }}
-            className="w-full flex items-center space-x-2 py-2 text-sm text-red-400"
-          >
-            <LogOut className="w-4 h-4" />
-            <span>Sign Out</span>
-          </button>
+            <Link
+              to="/catalog"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center space-x-2 p-2 rounded-lg text-xs text-slate-300 hover:bg-slate-700"
+            >
+              <Layers className="w-4 h-4 text-purple-400" />
+              <span>Catalog</span>
+            </Link>
+            <Link
+              to="/suppliers"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center space-x-2 p-2 rounded-lg text-xs text-slate-300 hover:bg-slate-700"
+            >
+              <Truck className="w-4 h-4 text-amber-400" />
+              <span>Suppliers</span>
+            </Link>
+            {isOwner && (
+              <Link
+                to="/reports"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center space-x-2 p-2 rounded-lg text-xs text-slate-300 hover:bg-slate-700"
+              >
+                <BarChart3 className="w-4 h-4 text-emerald-400" />
+                <span>Reports</span>
+              </Link>
+            )}
+            {isOwner && (
+              <Link
+                to="/audit"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center space-x-2 p-2 rounded-lg text-xs text-slate-300 hover:bg-slate-700"
+              >
+                <ShieldAlert className="w-4 h-4 text-rose-400" />
+                <span>Audit Logs</span>
+              </Link>
+            )}
+            {isOwner && (
+              <Link
+                to="/settings"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center space-x-2 p-2 rounded-lg text-xs text-slate-300 hover:bg-slate-700"
+              >
+                <Settings className="w-4 h-4 text-slate-400" />
+                <span>Settings</span>
+              </Link>
+            )}
+          </div>
+
+          <div className="pt-2 border-t border-slate-700">
+            <button
+              onClick={() => {
+                setMobileMenuOpen(false);
+                logout();
+              }}
+              className="w-full flex items-center justify-center space-x-2 py-2 rounded-lg text-xs font-semibold text-rose-400 hover:bg-slate-700"
+            >
+              <LogOut className="w-4 h-4" />
+              <span>Sign Out</span>
+            </button>
+          </div>
         </div>
       )}
 
@@ -153,9 +224,11 @@ export function AppLayout() {
 
       {/* Mobile Bottom Navigation Bar (Thumb-friendly tap targets) */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-50 flex items-center justify-around py-2 px-1 shadow-lg">
-        {navItems.slice(0, 5).map((item) => {
+        {mobileBottomNav.map((item) => {
           const Icon = item.icon;
-          const isActive = location.pathname.startsWith(item.path);
+          const isActive = item.exact
+            ? location.pathname === item.path
+            : location.pathname.startsWith(item.path);
           return (
             <Link
               key={item.path}

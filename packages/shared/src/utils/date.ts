@@ -38,3 +38,17 @@ export function getTodayPKT(): string {
   });
   return formatter.format(now);
 }
+
+/**
+ * Generate CSV text with proper RFC 4180 escaping
+ */
+export function toCSV(headers: string[], rows: (string | number | null | undefined)[][]): string {
+  const escape = (val: string | number | null | undefined) => {
+    if (val === null || val === undefined) return '""';
+    const str = String(val).replace(/"/g, '""');
+    return `"${str}"`;
+  };
+  const headerLine = headers.map(escape).join(",");
+  const rowLines = rows.map((r) => r.map(escape).join(","));
+  return [headerLine, ...rowLines].join("\r\n");
+}
