@@ -8,6 +8,10 @@ import { StockInPage } from "./pages/StockInPage";
 import { CatalogPage } from "./pages/CatalogPage";
 import { SuppliersPage } from "./pages/SuppliersPage";
 import { SettingsPage } from "./pages/SettingsPage";
+import { CustomersPage } from "./pages/CustomersPage";
+import { SalesPage } from "./pages/SalesPage";
+import { NewSalePage } from "./pages/NewSalePage";
+import { InvoicePrintPage } from "./pages/InvoicePrintPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -127,12 +131,23 @@ export function App() {
               }
             >
               <Route index element={<Navigate to="/inventory" replace />} />
+              <Route path="sales" element={<SalesPage />} />
+              <Route path="sales/new" element={<NewSalePage />} />
+              <Route path="customers" element={<CustomersPage />} />
               <Route path="inventory" element={<InventoryPage />} />
               <Route path="stock-in" element={<StockInPage />} />
               <Route path="catalog" element={<CatalogPage />} />
               <Route path="suppliers" element={<SuppliersPage />} />
               <Route path="settings" element={<SettingsPage />} />
             </Route>
+            <Route
+              path="/invoices/:saleId"
+              element={
+                <ProtectedRoute>
+                  <InvoicePrintPage />
+                </ProtectedRoute>
+              }
+            />
           </Routes>
         </BrowserRouter>
       </AuthProvider>

@@ -3,6 +3,9 @@ import { Link, useLocation, Outlet } from "react-router-dom";
 import {
   Bike,
   PackagePlus,
+  ShoppingCart,
+  FileText,
+  Users,
   Layers,
   Truck,
   Settings,
@@ -21,8 +24,11 @@ export function AppLayout() {
   const isOwner = user?.role === "owner";
 
   const navItems = [
+    { name: "New Sale", path: "/sales/new", icon: ShoppingCart },
+    { name: "Sales", path: "/sales", icon: FileText },
     { name: "Inventory", path: "/inventory", icon: Bike },
     { name: "Stock In", path: "/stock-in", icon: PackagePlus },
+    { name: "Customers", path: "/customers", icon: Users },
     { name: "Catalog", path: "/catalog", icon: Layers },
     { name: "Suppliers", path: "/suppliers", icon: Truck },
     ...(isOwner ? [{ name: "Settings", path: "/settings", icon: Settings }] : []),
