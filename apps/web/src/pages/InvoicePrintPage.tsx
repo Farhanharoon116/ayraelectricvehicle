@@ -1,15 +1,73 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Printer,
   Share2,
   ArrowLeft,
   Check,
   ShieldCheck,
+  AlertCircle,
+  X,
 } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
 import { fetchApi } from "../lib/api";
 import { formatPKR, formatPKTDate } from "@aev/shared";
+
+// ─── Void Modal (inline) ──────────────────────────────────────────────────────
+
+function VoidModal({ saleId, onClose, onSuccess }: { saleId: string; onClose: () => void; onSuccess: () => void }) {
+  const [reason, setReason] = useState("");
+  const [error, setError] = useState("");
+
+  const mutation = useMutation({
+    mutationFn: () =>
+      fetchApi(`/api/sales/${saleId}/void`, {
+        method: "POST",
+        body: JSON.stringify({ voidReason: reason.trim() }),
+      }),
+    onSuccess: () => { onSuccess(); onClose(); },
+    onError: (err: Error) => setError(err.message || "Failed to void sale"),
+  });
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-4 border-b border-slate-100">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-5 h-5 text-rose-600" />
+            <h2 className="font-bold text-slate-900 text-sm">Void Sale</h2>
+          </div>
+          <button onClick={onClose}><X className="w-4 h-4 text-slate-500" /></button>
+        </div>
+        <div className="p-4 space-y-4">
+          {error && <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 text-xs rounded-xl">{error}</div>}
+          <p className="text-xs text-slate-600">This will mark the sale as voided and return the unit to in-stock. This cannot be undone.</p>
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">Reason *</label>
+            <textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              rows={3}
+              placeholder="Minimum 5 characters..."
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/20 resize-none"
+            />
+          </div>
+          <div className="flex gap-2">
+            <button onClick={onClose} className="flex-1 py-2 border border-slate-300 text-slate-700 rounded-xl text-xs font-semibold hover:bg-slate-50">Cancel</button>
+            <button
+              onClick={() => { setError(""); if (reason.trim().length < 5) { setError("Reason must be at least 5 characters"); return; } mutation.mutate(); }}
+              disabled={mutation.isPending}
+              className="flex-1 py-2 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold"
+            >
+              {mutation.isPending ? "Voiding..." : "Void Sale"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 interface InvoiceData {
   sale: {
@@ -60,7 +118,11 @@ interface InvoiceData {
 export function InvoicePrintPage() {
   const { saleId } = useParams<{ saleId: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const isOwner = user?.role === "owner";
   const [copied, setCopied] = useState(false);
+  const [showVoidModal, setShowVoidModal] = useState(false);
 
   const { data, isLoading, error } = useQuery<{ invoice: InvoiceData }>({
     queryKey: ["invoice", saleId],
@@ -129,6 +191,16 @@ export function InvoicePrintPage() {
         </button>
 
         <div className="flex items-center gap-2">
+          {isOwner && !sale.isVoided && (
+            <button
+              onClick={() => setShowVoidModal(true)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition-colors"
+            >
+              <AlertCircle className="w-4 h-4" />
+              <span>Void Sale</span>
+            </button>
+          )}
+
           <button
             onClick={handleShare}
             className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-colors"
@@ -350,6 +422,17 @@ export function InvoicePrintPage() {
           )}
         </div>
       </div>
+
+      {showVoidModal && (
+        <VoidModal
+          saleId={sale.id}
+          onClose={() => setShowVoidModal(false)}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ["invoice", saleId] });
+            queryClient.invalidateQueries({ queryKey: ["sales"] });
+          }}
+        />
+      )}
     </div>
   );
 }

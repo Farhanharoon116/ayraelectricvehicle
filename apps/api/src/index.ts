@@ -9,6 +9,7 @@ import { supplierRoutes } from "./routes/suppliers";
 import { unitRoutes } from "./routes/units";
 import { customerRoutes } from "./routes/customers";
 import { salesRoutes } from "./routes/sales";
+import { paymentRoutes } from "./routes/payments";
 import { requireAuth } from "./middleware/auth";
 import { createDb } from "./db";
 import { installmentSchedules } from "@aev/shared";
@@ -61,6 +62,7 @@ protectedApi.route("/suppliers", supplierRoutes);
 protectedApi.route("/units", unitRoutes);
 protectedApi.route("/customers", customerRoutes);
 protectedApi.route("/sales", salesRoutes);
+protectedApi.route("/payments", paymentRoutes);
 
 app.route("/api", protectedApi);
 

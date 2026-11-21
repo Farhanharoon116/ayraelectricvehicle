@@ -137,10 +137,13 @@ export const createSaleSchema = z.object({
   basePrice: z.number().int().positive("Price must be positive PKR"),
   discount: z.number().int().nonnegative().default(0),
 
-  // Full Payment specific
-  initialPaymentAmount: z.number().int().nonnegative().default(0),
-  paymentMethod: z.enum(["cash", "bank_transfer", "other"]).default("cash"),
-  paymentReference: z.string().optional(),
+  // Split payment support (works for both full_payment and installment down payment)
+  payments: z.array(z.object({
+    amount: z.number().int().positive(),
+    paymentMethod: z.enum(["cash", "bank_transfer", "other"]),
+    reference: z.string().optional(),
+    notes: z.string().optional(),
+  })).default([]),
 
   // Installment specific
   installmentPlan: z
