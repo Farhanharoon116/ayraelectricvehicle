@@ -44,6 +44,9 @@ export const showrooms = sqliteTable("showrooms", {
   // Guarantor Requirement
   guarantorEnabled: integer("guarantor_enabled", { mode: "boolean" }).notNull().default(true),
 
+  // High Discount Threshold for Reporting (Percentage, default 10%)
+  highDiscountThresholdPercent: integer("high_discount_threshold_percent").notNull().default(10),
+
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
     .default(sql`(strftime('%s', 'now'))`),
@@ -168,6 +171,7 @@ export const supplierTransactions = sqliteTable("supplier_transactions", {
     .references(() => suppliers.id),
   type: text("type", { enum: ["purchase", "payment"] }).notNull(),
   amount: integer("amount").notNull(), // Integer PKR
+  accountId: text("account_id"), // Linked account for payment outflow
   reference: text("reference"),
   notes: text("notes"),
   transactionDate: integer("transaction_date", { mode: "timestamp" }).notNull(),
@@ -411,6 +415,7 @@ export const payments = sqliteTable(
       .notNull()
       .references(() => sales.id),
     receiptNumber: text("receipt_number").notNull(),
+    accountId: text("account_id"), // Destination account receiving payment
     paymentDate: integer("payment_date", { mode: "timestamp" }).notNull(),
     amount: integer("amount").notNull(),
     paymentMethod: text("payment_method", { enum: ["cash", "bank_transfer", "other"] }).notNull(),
@@ -475,6 +480,153 @@ export const auditLogs = sqliteTable(
     showroomActionIdx: index("idx_audit_logs_action").on(table.showroomId, table.action, table.createdAt),
   })
 );
+
+// ============================================================================
+// 9. ACCOUNTS & FINANCIAL LEDGER
+// ============================================================================
+export const accounts = sqliteTable(
+  "accounts",
+  {
+    id: text("id").primaryKey(),
+    showroomId: text("showroom_id")
+      .notNull()
+      .references(() => showrooms.id),
+    name: text("name").notNull(),
+    type: text("type", { enum: ["cash", "bank", "mobile_wallet", "other"] }).notNull(),
+    bankName: text("bank_name"),
+    accountTitle: text("account_title"),
+    accountNumber: text("account_number"),
+    openingBalance: integer("opening_balance").notNull().default(0), // Integer PKR
+    openingDate: integer("opening_date", { mode: "timestamp" }).notNull(),
+    isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(strftime('%s', 'now'))`),
+    updatedAt: integer("updated_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(strftime('%s', 'now'))`),
+  },
+  (table) => ({
+    showroomNameUnique: uniqueIndex("idx_accounts_showroom_name").on(table.showroomId, table.name),
+  })
+);
+
+export const accountTransactions = sqliteTable(
+  "account_transactions",
+  {
+    id: text("id").primaryKey(),
+    showroomId: text("showroom_id")
+      .notNull()
+      .references(() => showrooms.id),
+    accountId: text("account_id")
+      .notNull()
+      .references(() => accounts.id),
+    date: integer("date", { mode: "timestamp" }).notNull(),
+    direction: text("direction", { enum: ["in", "out"] }).notNull(),
+    amount: integer("amount").notNull(), // Integer PKR, always positive
+    type: text("type", {
+      enum: [
+        "customer_payment",
+        "supplier_payment",
+        "expense",
+        "transfer",
+        "owner_investment",
+        "owner_withdrawal",
+        "adjustment",
+      ],
+    }).notNull(),
+    category: text("category"), // e.g. "Down Payment", "Installment", "Rent", "Supplier Bill"
+    referenceType: text("reference_type", {
+      enum: [
+        "payment",
+        "supplier_transaction",
+        "expense",
+        "transfer",
+        "reconciliation",
+        "owner_equity",
+      ],
+    }),
+    referenceId: text("reference_id"),
+    notes: text("notes"),
+    createdBy: text("created_by")
+      .notNull()
+      .references(() => users.id),
+    reversesId: text("reverses_id"), // Self reference for reversing entries
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(strftime('%s', 'now'))`),
+  },
+  (table) => ({
+    accountDateIdx: index("idx_acc_tx_account_date").on(table.showroomId, table.accountId, table.date),
+    idempotencyIdx: uniqueIndex("idx_acc_tx_idempotent")
+      .on(table.showroomId, table.referenceType, table.referenceId, table.type)
+      .where(sql`${table.reversesId} IS NULL`),
+  })
+);
+
+export const expenses = sqliteTable("expenses", {
+  id: text("id").primaryKey(),
+  showroomId: text("showroom_id")
+    .notNull()
+    .references(() => showrooms.id),
+  accountId: text("account_id")
+    .notNull()
+    .references(() => accounts.id),
+  category: text("category").notNull(),
+  amount: integer("amount").notNull(), // Integer PKR
+  date: integer("date", { mode: "timestamp" }).notNull(),
+  notes: text("notes"),
+  receiptR2Key: text("receipt_r2_key"),
+  isVoided: integer("is_voided", { mode: "boolean" }).notNull().default(false),
+  voidReason: text("void_reason"),
+  voidedBy: text("voided_by").references(() => users.id),
+  voidedAt: integer("voided_at", { mode: "timestamp" }),
+  createdBy: text("created_by")
+    .notNull()
+    .references(() => users.id),
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .notNull()
+    .default(sql`(strftime('%s', 'now'))`),
+  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .notNull()
+    .default(sql`(strftime('%s', 'now'))`),
+});
+
+export const expenseCategories = sqliteTable("expense_categories", {
+  id: text("id").primaryKey(),
+  showroomId: text("showroom_id")
+    .notNull()
+    .references(() => showrooms.id),
+  name: text("name").notNull(),
+  isDefault: integer("is_default", { mode: "boolean" }).notNull().default(false),
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .notNull()
+    .default(sql`(strftime('%s', 'now'))`),
+});
+
+export const accountTransfers = sqliteTable("account_transfers", {
+  id: text("id").primaryKey(),
+  showroomId: text("showroom_id")
+    .notNull()
+    .references(() => showrooms.id),
+  fromAccountId: text("from_account_id")
+    .notNull()
+    .references(() => accounts.id),
+  toAccountId: text("to_account_id")
+    .notNull()
+    .references(() => accounts.id),
+  amount: integer("amount").notNull(), // Integer PKR
+  date: integer("date", { mode: "timestamp" }).notNull(),
+  notes: text("notes"),
+  fromTransactionId: text("from_transaction_id"),
+  toTransactionId: text("to_transaction_id"),
+  createdBy: text("created_by")
+    .notNull()
+    .references(() => users.id),
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .notNull()
+    .default(sql`(strftime('%s', 'now'))`),
+});
 
 // ============================================================================
 // RELATIONS
@@ -574,5 +726,51 @@ export const paymentAllocationsRelations = relations(paymentAllocations, ({ one 
   schedule: one(installmentSchedules, {
     fields: [paymentAllocations.installmentScheduleId],
     references: [installmentSchedules.id],
+  }),
+}));
+
+export const accountsRelations = relations(accounts, ({ one, many }) => ({
+  showroom: one(showrooms, {
+    fields: [accounts.showroomId],
+    references: [showrooms.id],
+  }),
+  transactions: many(accountTransactions),
+  expenses: many(expenses),
+}));
+
+export const accountTransactionsRelations = relations(accountTransactions, ({ one }) => ({
+  account: one(accounts, {
+    fields: [accountTransactions.accountId],
+    references: [accounts.id],
+  }),
+  creator: one(users, {
+    fields: [accountTransactions.createdBy],
+    references: [users.id],
+  }),
+}));
+
+export const expensesRelations = relations(expenses, ({ one }) => ({
+  account: one(accounts, {
+    fields: [expenses.accountId],
+    references: [accounts.id],
+  }),
+  creator: one(users, {
+    fields: [expenses.createdBy],
+    references: [users.id],
+  }),
+}));
+
+export const accountTransfersRelations = relations(accountTransfers, ({ one }) => ({
+  fromAccount: one(accounts, {
+    fields: [accountTransfers.fromAccountId],
+    references: [accounts.id],
+  }),
+  toAccount: one(accounts, {
+    fields: [accountTransfers.toAccountId],
+    references: [accounts.id],
+  }),
+  creator: one(users, {
+    fields: [accountTransfers.createdBy],
+    references: [users.id],
   }),
 }));

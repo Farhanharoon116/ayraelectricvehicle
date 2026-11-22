@@ -51,6 +51,7 @@ export const updateSettingsSchema = z.object({
   lateFineGraceDays: z.number().int().nonnegative().default(5),
 
   guarantorEnabled: z.boolean().default(true),
+  highDiscountThresholdPercent: z.number().int().min(1).max(100).default(10),
 });
 
 // ----------------------------------------------------------------------------
@@ -82,6 +83,7 @@ export const createSupplierSchema = z.object({
 
 export const createSupplierPaymentSchema = z.object({
   supplierId: z.string().min(1),
+  accountId: z.string().min(1, "Account is required"),
   amount: z.number().int().positive("Amount must be positive PKR"),
   reference: z.string().optional(),
   notes: z.string().optional(),
@@ -139,8 +141,9 @@ export const createSaleSchema = z.object({
 
   // Split payment support (works for both full_payment and installment down payment)
   payments: z.array(z.object({
+    accountId: z.string().min(1, "Account is required"),
     amount: z.number().int().positive(),
-    paymentMethod: z.enum(["cash", "bank_transfer", "other"]),
+    paymentMethod: z.enum(["cash", "bank_transfer", "other"]).default("cash"),
     reference: z.string().optional(),
     notes: z.string().optional(),
   })).default([]),
@@ -169,6 +172,7 @@ export const voidSaleSchema = z.object({
 // ----------------------------------------------------------------------------
 export const createPaymentSchema = z.object({
   saleId: z.string().min(1, "Sale ID is required"),
+  accountId: z.string().min(1, "Account is required"),
   amount: z.number().int().positive("Payment amount must be positive PKR"),
   paymentDate: z.string().datetime().or(z.string().regex(/^\d{4}-\d{2}-\d{2}/)),
   paymentMethod: z.enum(["cash", "bank_transfer", "other"]).default("cash"),
@@ -178,4 +182,56 @@ export const createPaymentSchema = z.object({
 
 export const waiveFineSchema = z.object({
   installmentScheduleId: z.string().min(1, "Schedule ID is required"),
+});
+
+// ----------------------------------------------------------------------------
+// Accounts & Cash Flow
+// ----------------------------------------------------------------------------
+export const createAccountSchema = z.object({
+  name: z.string().min(2, "Account name must be at least 2 characters"),
+  type: z.enum(["cash", "bank", "mobile_wallet", "other"]),
+  bankName: z.string().optional(),
+  accountTitle: z.string().optional(),
+  accountNumber: z.string().optional(),
+  openingBalance: z.number().int().nonnegative("Opening balance must be non-negative integer PKR").default(0),
+  openingDate: z.string().datetime().or(z.string().regex(/^\d{4}-\d{2}-\d{2}/)),
+});
+
+export const updateAccountSchema = z.object({
+  name: z.string().min(2, "Account name must be at least 2 characters").optional(),
+  bankName: z.string().optional(),
+  accountTitle: z.string().optional(),
+  accountNumber: z.string().optional(),
+  isActive: z.boolean().optional(),
+});
+
+export const createExpenseSchema = z.object({
+  accountId: z.string().min(1, "Account is required"),
+  category: z.string().min(1, "Category is required"),
+  amount: z.number().int().positive("Amount must be positive PKR"),
+  date: z.string().datetime().or(z.string().regex(/^\d{4}-\d{2}-\d{2}/)),
+  notes: z.string().optional(),
+  receiptR2Key: z.string().optional(),
+});
+
+export const voidExpenseSchema = z.object({
+  voidReason: z.string().min(5, "A reason of at least 5 characters is required to void an expense"),
+});
+
+export const createExpenseCategorySchema = z.object({
+  name: z.string().min(2, "Category name is required"),
+});
+
+export const createTransferSchema = z.object({
+  fromAccountId: z.string().min(1, "Source account is required"),
+  toAccountId: z.string().min(1, "Destination account is required"),
+  amount: z.number().int().positive("Transfer amount must be positive PKR"),
+  date: z.string().datetime().or(z.string().regex(/^\d{4}-\d{2}-\d{2}/)),
+  notes: z.string().optional(),
+});
+
+export const reconcileAccountSchema = z.object({
+  countedBalance: z.number().int("Counted balance must be an integer PKR"),
+  countedDate: z.string().datetime().or(z.string().regex(/^\d{4}-\d{2}-\d{2}/)),
+  reason: z.string().min(5, "A reason of at least 5 characters is required for reconciliation adjustment"),
 });
