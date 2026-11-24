@@ -9,6 +9,8 @@ import {
   installmentPlans,
   installmentSchedules,
   paymentAllocations,
+  accounts,
+  accountTransactions,
   showrooms,
   counters,
   auditLogs,
@@ -63,6 +65,24 @@ paymentRoutes.post("/", zValidator("json", createPaymentSchema), async (c) => {
 
   if (!showroom) return c.json({ error: "Showroom not found" }, 500);
 
+  // Validate receiving account
+  const [account] = await db
+    .select()
+    .from(accounts)
+    .where(and(eq(accounts.id, data.accountId), eq(accounts.showroomId, user.showroomId)))
+    .limit(1);
+
+  if (!account) return c.json({ error: "Selected account not found" }, 404);
+  if (!account.isActive) return c.json({ error: "Cannot receive payment into an inactive account" }, 400);
+
+  // Rule 5: Derive / align payment method from account
+  let paymentMethod = data.paymentMethod;
+  if (account.type === "cash") {
+    paymentMethod = "cash";
+  } else if (account.type === "bank") {
+    paymentMethod = "bank_transfer";
+  }
+
   // 4. Receipt counter
   const [receiptCounterRow] = await db
     .select()
@@ -113,14 +133,34 @@ paymentRoutes.post("/", zValidator("json", createPaymentSchema), async (c) => {
       showroomId: user.showroomId,
       saleId: data.saleId,
       receiptNumber,
+      accountId: account.id,
       paymentDate,
       amount: Math.round(data.amount),
-      paymentMethod: data.paymentMethod,
+      paymentMethod,
       reference: data.reference?.trim() ?? null,
       notes: data.notes?.trim() ?? null,
       createdBy: user.id,
       createdAt: now,
       updatedAt: now,
+    })
+  );
+
+  // Inflow into account_transactions ledger
+  batchStatements.push(
+    db.insert(accountTransactions).values({
+      id: `tx_pay_${paymentId}`,
+      showroomId: user.showroomId,
+      accountId: account.id,
+      date: paymentDate,
+      direction: "in",
+      amount: Math.round(data.amount),
+      type: "customer_payment",
+      category: sale.saleType === "installment" ? "Installment Payment" : "Full Payment",
+      referenceType: "payment",
+      referenceId: paymentId,
+      notes: `Customer payment receipt ${receiptNumber} against ${sale.invoiceNumber}`,
+      createdBy: user.id,
+      createdAt: now,
     })
   );
 

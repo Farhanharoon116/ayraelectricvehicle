@@ -13,6 +13,8 @@ import { paymentRoutes } from "./routes/payments";
 import { dashboardRoutes } from "./routes/dashboard";
 import { reportRoutes } from "./routes/reports";
 import { auditRoutes } from "./routes/audit";
+import { accountRoutes } from "./routes/accounts";
+import { expenseRoutes } from "./routes/expenses";
 import { requireAuth } from "./middleware/auth";
 import { createDb } from "./db";
 import {
@@ -78,6 +80,8 @@ protectedApi.use("*", requireAuth);
 protectedApi.route("/dashboard", dashboardRoutes);
 protectedApi.route("/reports", reportRoutes);
 protectedApi.route("/audit", auditRoutes);
+protectedApi.route("/accounts", accountRoutes);
+protectedApi.route("/expenses", expenseRoutes);
 protectedApi.route("/settings", settingsRoutes);
 protectedApi.route("/catalog", catalogRoutes);
 protectedApi.route("/suppliers", supplierRoutes);

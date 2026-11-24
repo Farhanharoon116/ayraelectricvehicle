@@ -16,6 +16,8 @@ import {
   X,
   BarChart3,
   ShieldAlert,
+  Wallet,
+  Receipt,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
@@ -30,6 +32,8 @@ export function AppLayout() {
     { name: "Dashboard", path: "/", icon: LayoutDashboard, exact: true },
     { name: "New Sale", path: "/sales/new", icon: ShoppingCart },
     { name: "Sales", path: "/sales", icon: FileText },
+    { name: "Expenses", path: "/expenses", icon: Receipt },
+    { name: "Accounts", path: "/accounts", icon: Wallet },
     { name: "Inventory", path: "/inventory", icon: Bike },
     { name: "Stock In", path: "/stock-in", icon: PackagePlus },
     { name: "Customers", path: "/customers", icon: Users },
@@ -161,6 +165,22 @@ export function AppLayout() {
             >
               <Layers className="w-4 h-4 text-purple-400" />
               <span>Catalog</span>
+            </Link>
+            <Link
+              to="/expenses"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center space-x-2 p-2 rounded-lg text-xs text-slate-300 hover:bg-slate-700"
+            >
+              <Receipt className="w-4 h-4 text-rose-400" />
+              <span>Expenses</span>
+            </Link>
+            <Link
+              to="/accounts"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center space-x-2 p-2 rounded-lg text-xs text-slate-300 hover:bg-slate-700"
+            >
+              <Wallet className="w-4 h-4 text-emerald-400" />
+              <span>Accounts</span>
             </Link>
             <Link
               to="/suppliers"

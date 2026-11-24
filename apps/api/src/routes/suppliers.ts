@@ -7,6 +7,8 @@ import { requireOwner } from "../middleware/auth";
 import {
   suppliers,
   supplierTransactions,
+  accounts,
+  accountTransactions,
   auditLogs,
   createSupplierSchema,
   createSupplierPaymentSchema,
@@ -139,15 +141,27 @@ supplierRoutes.post("/:id/payments", requireOwner, zValidator("json", createSupp
     return c.json({ error: "Supplier not found" }, 404);
   }
 
+  // Validate account
+  const [account] = await db
+    .select()
+    .from(accounts)
+    .where(and(eq(accounts.id, data.accountId), eq(accounts.showroomId, user.showroomId)))
+    .limit(1);
+
+  if (!account) return c.json({ error: "Selected account not found" }, 404);
+  if (!account.isActive) return c.json({ error: "Cannot pay supplier from an inactive account" }, 400);
+
   const txId = crypto.randomUUID();
   const now = new Date();
   const txDate = new Date(data.transactionDate);
+  const ledgerTxId = `tx_sup_${txId}`;
 
   await db.batch([
     db.insert(supplierTransactions).values({
       id: txId,
       showroomId: user.showroomId,
       supplierId,
+      accountId: account.id,
       type: "payment",
       amount: data.amount,
       reference: data.reference?.trim() || null,
@@ -156,6 +170,21 @@ supplierRoutes.post("/:id/payments", requireOwner, zValidator("json", createSupp
       createdBy: user.id,
       createdAt: now,
       updatedAt: now,
+    }),
+    db.insert(accountTransactions).values({
+      id: ledgerTxId,
+      showroomId: user.showroomId,
+      accountId: account.id,
+      date: txDate,
+      direction: "out",
+      amount: data.amount,
+      type: "supplier_payment",
+      category: "Supplier Payment",
+      referenceType: "supplier_transaction",
+      referenceId: txId,
+      notes: `Payment to supplier ${supplier.name}${data.reference ? ` (Ref: ${data.reference.trim()})` : ""}`,
+      createdBy: user.id,
+      createdAt: now,
     }),
     db.insert(auditLogs).values({
       id: crypto.randomUUID(),
@@ -167,6 +196,7 @@ supplierRoutes.post("/:id/payments", requireOwner, zValidator("json", createSupp
       details: JSON.stringify({
         supplierId,
         supplierName: supplier.name,
+        accountName: account.name,
         amount: data.amount,
         reference: data.reference,
       }),

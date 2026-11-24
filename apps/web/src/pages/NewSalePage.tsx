@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import {
@@ -61,7 +61,15 @@ interface ShowroomSettings {
   lateFineGraceDays: number;
 }
 
+interface AccountOption {
+  id: string;
+  name: string;
+  type: "cash" | "bank" | "mobile_wallet" | "other";
+  isActive: boolean;
+}
+
 interface PaymentRow {
+  accountId: string;
   amount: number;
   paymentMethod: "cash" | "bank_transfer" | "other";
   reference: string;
@@ -74,11 +82,13 @@ function SplitPaymentRows({
   onChange,
   totalLabel,
   targetAmount,
+  accounts,
 }: {
   rows: PaymentRow[];
   onChange: (rows: PaymentRow[]) => void;
   totalLabel: string;
   targetAmount: number;
+  accounts: AccountOption[];
 }) {
   const sumPayments = rows.reduce((s, r) => s + (r.amount || 0), 0);
   const unallocated = targetAmount - sumPayments;
@@ -90,8 +100,26 @@ function SplitPaymentRows({
     onChange(next);
   };
 
+  const handleAccountChange = (idx: number, accId: string) => {
+    const acc = accounts.find((a) => a.id === accId);
+    const method: "cash" | "bank_transfer" | "other" =
+      acc?.type === "cash" ? "cash" : acc?.type === "bank" ? "bank_transfer" : "other";
+    updateRow(idx, { accountId: accId, paymentMethod: method });
+  };
+
   const addRow = () => {
-    onChange([...rows, { amount: 0, paymentMethod: "cash", reference: "" }]);
+    const defaultAcc = accounts[0];
+    const defaultMethod =
+      defaultAcc?.type === "cash" ? "cash" : defaultAcc?.type === "bank" ? "bank_transfer" : "other";
+    onChange([
+      ...rows,
+      {
+        accountId: defaultAcc?.id || "",
+        amount: 0,
+        paymentMethod: defaultMethod,
+        reference: "",
+      },
+    ]);
   };
 
   const removeRow = (idx: number) => {
@@ -114,10 +142,30 @@ function SplitPaymentRows({
               </button>
             )}
           </div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <div>
               <label className="text-[10px] font-semibold text-slate-500 uppercase block mb-1">
-                Amount (PKR)
+                Account *
+              </label>
+              <select
+                value={row.accountId}
+                onChange={(e) => handleAccountChange(idx, e.target.value)}
+                className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+              >
+                {accounts.length === 0 ? (
+                  <option value="">No accounts found</option>
+                ) : (
+                  accounts.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.name} ({a.type})
+                    </option>
+                  ))
+                )}
+              </select>
+            </div>
+            <div>
+              <label className="text-[10px] font-semibold text-slate-500 uppercase block mb-1">
+                Amount (PKR) *
               </label>
               <input
                 type="number"
@@ -127,22 +175,6 @@ function SplitPaymentRows({
                 min={1}
                 className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-emerald-700 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
               />
-            </div>
-            <div>
-              <label className="text-[10px] font-semibold text-slate-500 uppercase block mb-1">
-                Method
-              </label>
-              <select
-                value={row.paymentMethod}
-                onChange={(e) =>
-                  updateRow(idx, { paymentMethod: e.target.value as PaymentRow["paymentMethod"] })
-                }
-                className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-              >
-                <option value="cash">Cash</option>
-                <option value="bank_transfer">Bank Transfer</option>
-                <option value="other">Other</option>
-              </select>
             </div>
           </div>
           {(row.paymentMethod === "bank_transfer" || row.paymentMethod === "other") && (
@@ -214,7 +246,7 @@ export function NewSalePage() {
 
   // ── Full Payment split rows ──
   const [fullPaymentRows, setFullPaymentRows] = useState<PaymentRow[]>([
-    { amount: 0, paymentMethod: "cash", reference: "" },
+    { accountId: "", amount: 0, paymentMethod: "cash", reference: "" },
   ]);
 
   // ── Installment state ──
@@ -228,10 +260,30 @@ export function NewSalePage() {
   const [guarantorPhone, setGuarantorPhone] = useState("");
   const [guarantorAddress, setGuarantorAddress] = useState("");
   const [downPaymentRows, setDownPaymentRows] = useState<PaymentRow[]>([
-    { amount: 0, paymentMethod: "cash", reference: "" },
+    { accountId: "", amount: 0, paymentMethod: "cash", reference: "" },
   ]);
 
   // ── Queries ──
+  const { data: accountsData } = useQuery<{ accounts: AccountOption[] }>({
+    queryKey: ["accounts"],
+    queryFn: () => fetchApi("/api/accounts"),
+  });
+  const activeAccounts = accountsData?.accounts?.filter((a) => a.isActive) || [];
+
+  // Default rows to first active account
+  useEffect(() => {
+    if (activeAccounts.length > 0) {
+      const defaultAcc = activeAccounts[0]!;
+      const defaultMethod =
+        defaultAcc.type === "cash" ? "cash" : defaultAcc.type === "bank" ? "bank_transfer" : "other";
+      setFullPaymentRows((prev) =>
+        prev.map((r) => (!r.accountId ? { ...r, accountId: defaultAcc.id, paymentMethod: defaultMethod } : r))
+      );
+      setDownPaymentRows((prev) =>
+        prev.map((r) => (!r.accountId ? { ...r, accountId: defaultAcc.id, paymentMethod: defaultMethod } : r))
+      );
+    }
+  }, [activeAccounts]);
   const { data: customersData } = useQuery<{ customers: CustomerOption[] }>({
     queryKey: ["customers-picker", customerSearch],
     queryFn: () => {
@@ -311,7 +363,17 @@ export function NewSalePage() {
   const handleUnitSelect = (unit: InStockUnit) => {
     setSelectedUnitId(unit.id);
     setBasePrice(unit.defaultSellingPrice);
-    setFullPaymentRows([{ amount: unit.defaultSellingPrice, paymentMethod: "cash", reference: "" }]);
+    const defaultAcc = activeAccounts[0];
+    const defaultMethod =
+      defaultAcc?.type === "cash" ? "cash" : defaultAcc?.type === "bank" ? "bank_transfer" : "other";
+    setFullPaymentRows([
+      {
+        accountId: defaultAcc?.id || "",
+        amount: unit.defaultSellingPrice,
+        paymentMethod: defaultMethod,
+        reference: "",
+      },
+    ]);
   };
 
   const handleDiscountChange = (val: number) => {
@@ -346,6 +408,10 @@ export function NewSalePage() {
         setFormError(`Payment total (${formatPKR(sumPaid)}) must equal the total amount (${formatPKR(totalAmount)})`);
         return;
       }
+      if (fullPaymentRows.some((r) => !r.accountId)) {
+        setFormError("Please select an account for each payment row");
+        return;
+      }
       createSaleMutation.mutate({
         customerId: selectedCustomerId,
         unitId: selectedUnitId,
@@ -355,6 +421,7 @@ export function NewSalePage() {
         discount,
         notes: notes.trim() || undefined,
         payments: fullPaymentRows.map((r) => ({
+          accountId: r.accountId,
           amount: r.amount,
           paymentMethod: r.paymentMethod,
           reference: r.reference.trim() || undefined,
@@ -383,6 +450,10 @@ export function NewSalePage() {
         setFormError(`Down payment split total (${formatPKR(sumDP)}) must equal down payment amount (${formatPKR(downPaymentAmount)})`);
         return;
       }
+      if (downPaymentAmount > 0 && downPaymentRows.some((r) => !r.accountId)) {
+        setFormError("Please select an account for each down payment row");
+        return;
+      }
 
       createSaleMutation.mutate({
         customerId: selectedCustomerId,
@@ -394,6 +465,7 @@ export function NewSalePage() {
         notes: notes.trim() || undefined,
         payments: downPaymentAmount > 0
           ? downPaymentRows.map((r) => ({
+              accountId: r.accountId,
               amount: r.amount,
               paymentMethod: r.paymentMethod,
               reference: r.reference.trim() || undefined,
@@ -742,6 +814,7 @@ export function NewSalePage() {
                   onChange={setFullPaymentRows}
                   totalLabel="Total Paid"
                   targetAmount={totalAmount}
+                  accounts={activeAccounts}
                 />
               </div>
             )}
@@ -780,7 +853,17 @@ export function NewSalePage() {
                       onChange={(e) => {
                         const v = Number(e.target.value);
                         setDownPaymentAmount(v);
-                        setDownPaymentRows([{ amount: v, paymentMethod: "cash", reference: "" }]);
+                        const defaultAcc = activeAccounts[0];
+                        const defaultMethod =
+                          defaultAcc?.type === "cash" ? "cash" : defaultAcc?.type === "bank" ? "bank_transfer" : "other";
+                        setDownPaymentRows([
+                          {
+                            accountId: defaultAcc?.id || "",
+                            amount: v,
+                            paymentMethod: defaultMethod,
+                            reference: "",
+                          },
+                        ]);
                       }}
                       min={0}
                       className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-900"
@@ -935,6 +1018,7 @@ export function NewSalePage() {
                       onChange={setDownPaymentRows}
                       totalLabel="Total Down Payment"
                       targetAmount={downPaymentAmount}
+                      accounts={activeAccounts}
                     />
                   </div>
                 )}

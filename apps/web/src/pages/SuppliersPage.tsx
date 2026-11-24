@@ -48,11 +48,19 @@ export function SuppliersPage() {
   const [supplierError, setSupplierError] = useState("");
 
   // Payment Form
+  const [paymentAccountId, setPaymentAccountId] = useState("");
   const [paymentAmount, setPaymentAmount] = useState<number>(0);
   const [paymentReference, setPaymentReference] = useState("");
   const [paymentNotes, setPaymentNotes] = useState("");
   const [paymentDate, setPaymentDate] = useState(getTodayPKT());
   const [paymentError, setPaymentError] = useState("");
+
+  const { data: accountsData } = useQuery<{ accounts: Array<{ id: string; name: string; type: string; isActive: boolean }> }>({
+    queryKey: ["accounts"],
+    queryFn: () => fetchApi("/api/accounts"),
+  });
+
+  const activeAccounts = accountsData?.accounts?.filter((a) => a.isActive) || [];
 
   const { data, isLoading } = useQuery<{ suppliers: SupplierItem[] }>({
     queryKey: ["suppliers"],
@@ -377,12 +385,18 @@ export function SuppliersPage() {
             <form
               onSubmit={(e) => {
                 e.preventDefault();
+                const accId = paymentAccountId || activeAccounts[0]?.id;
+                if (!accId) {
+                  setPaymentError("Please select an account to pay from");
+                  return;
+                }
                 if (paymentAmount <= 0) {
                   setPaymentError("Payment amount must be greater than zero");
                   return;
                 }
                 recordPaymentMutation.mutate({
                   supplierId: selectedSupplierForPayment.id,
+                  accountId: accId,
                   amount: Math.round(paymentAmount),
                   reference: paymentReference.trim() || undefined,
                   notes: paymentNotes.trim() || undefined,
@@ -391,6 +405,22 @@ export function SuppliersPage() {
               }}
               className="space-y-3 text-xs"
             >
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Account Paid From *</label>
+                <select
+                  value={paymentAccountId || (activeAccounts[0]?.id ?? "")}
+                  onChange={(e) => setPaymentAccountId(e.target.value)}
+                  required
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs focus:outline-none"
+                >
+                  {activeAccounts.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.name} ({a.type})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">Amount to Pay (PKR) *</label>
                 <input

@@ -11,6 +11,7 @@ import {
   customers,
   counters,
   payments,
+  accountTransactions,
   showrooms,
   auditLogs,
   installmentPlans,
@@ -423,13 +424,15 @@ salesRoutes.post("/", zValidator("json", createSaleSchema), async (c) => {
         currentReceiptSeq += 1;
         const receiptNum = `${showroom.receiptPrefix}-${currentYear}-${String(currentReceiptSeq).padStart(4, "0")}`;
         receiptNumbers.push(receiptNum);
+        const paymentId = crypto.randomUUID();
 
         batchStatements.push(
           db.insert(payments).values({
-            id: crypto.randomUUID(),
+            id: paymentId,
             showroomId: user.showroomId,
             saleId,
             receiptNumber: receiptNum,
+            accountId: payEntry.accountId,
             paymentDate: saleDate,
             amount: Math.round(payEntry.amount),
             paymentMethod: payEntry.paymentMethod,
@@ -438,6 +441,24 @@ salesRoutes.post("/", zValidator("json", createSaleSchema), async (c) => {
             createdBy: user.id,
             createdAt: now,
             updatedAt: now,
+          })
+        );
+
+        batchStatements.push(
+          db.insert(accountTransactions).values({
+            id: `tx_pay_${paymentId}`,
+            showroomId: user.showroomId,
+            accountId: payEntry.accountId,
+            date: saleDate,
+            direction: "in",
+            amount: Math.round(payEntry.amount),
+            type: "customer_payment",
+            category: "Full Payment",
+            referenceType: "payment",
+            referenceId: paymentId,
+            notes: `Payment receipt ${receiptNum} on invoice ${invoiceNumber}`,
+            createdBy: user.id,
+            createdAt: now,
           })
         );
       }
@@ -638,13 +659,15 @@ salesRoutes.post("/", zValidator("json", createSaleSchema), async (c) => {
         currentReceiptSeq += 1;
         const receiptNum = `${showroom.receiptPrefix}-${currentYear}-${String(currentReceiptSeq).padStart(4, "0")}`;
         receiptNumbers.push(receiptNum);
+        const paymentId = crypto.randomUUID();
 
         batchStatements.push(
           db.insert(payments).values({
-            id: crypto.randomUUID(),
+            id: paymentId,
             showroomId: user.showroomId,
             saleId,
             receiptNumber: receiptNum,
+            accountId: payEntry.accountId,
             paymentDate: saleDate,
             amount: Math.round(payEntry.amount),
             paymentMethod: payEntry.paymentMethod,
@@ -653,6 +676,24 @@ salesRoutes.post("/", zValidator("json", createSaleSchema), async (c) => {
             createdBy: user.id,
             createdAt: now,
             updatedAt: now,
+          })
+        );
+
+        batchStatements.push(
+          db.insert(accountTransactions).values({
+            id: `tx_pay_${paymentId}`,
+            showroomId: user.showroomId,
+            accountId: payEntry.accountId,
+            date: saleDate,
+            direction: "in",
+            amount: Math.round(payEntry.amount),
+            type: "customer_payment",
+            category: "Down Payment",
+            referenceType: "payment",
+            referenceId: paymentId,
+            notes: `Down payment receipt ${receiptNum} on invoice ${invoiceNumber}`,
+            createdBy: user.id,
+            createdAt: now,
           })
         );
       }
@@ -723,11 +764,43 @@ salesRoutes.post("/:id/void", zValidator("json", voidSaleSchema), async (c) => {
   if (!sale) return c.json({ error: "Sale not found" }, 404);
   if (sale.isVoided) return c.json({ error: "Sale is already voided" }, 400);
 
-  await db.batch([
+  // Fetch payments to create reversing ledger entries
+  const salePayments = await db
+    .select()
+    .from(payments)
+    .where(eq(payments.saleId, saleId));
+
+  const voidStatements: any[] = [
     db.update(sales).set({ isVoided: true, voidReason, voidedBy: user.id, voidedAt: now, updatedAt: now })
       .where(eq(sales.id, saleId)),
     db.update(units).set({ status: "in_stock", soldAt: null, updatedAt: now })
       .where(eq(units.id, sale.unitId)),
+  ];
+
+  for (const p of salePayments) {
+    if (p.accountId) {
+      voidStatements.push(
+        db.insert(accountTransactions).values({
+          id: `tx_rev_pay_${p.id}`,
+          showroomId: user.showroomId,
+          accountId: p.accountId,
+          date: now,
+          direction: "out",
+          amount: p.amount,
+          type: "adjustment",
+          category: "Voided Sale Reversal",
+          referenceType: "payment",
+          referenceId: `${p.id}:void_reversal`,
+          reversesId: `tx_pay_${p.id}`,
+          notes: `Reversal for voided invoice ${sale.invoiceNumber} - Reason: ${voidReason.trim()}`,
+          createdBy: user.id,
+          createdAt: now,
+        })
+      );
+    }
+  }
+
+  voidStatements.push(
     db.insert(auditLogs).values({
       id: crypto.randomUUID(),
       showroomId: user.showroomId,
@@ -738,8 +811,10 @@ salesRoutes.post("/:id/void", zValidator("json", voidSaleSchema), async (c) => {
       details: JSON.stringify({ voidReason, invoiceNumber: sale.invoiceNumber }),
       ipAddress: c.req.header("cf-connecting-ip") ?? "unknown",
       userAgent: c.req.header("user-agent"),
-    }),
-  ]);
+    })
+  );
+
+  await db.batch(voidStatements as any);
 
   return c.json({ success: true });
 });
