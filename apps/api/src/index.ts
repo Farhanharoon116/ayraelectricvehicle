@@ -15,6 +15,7 @@ import { reportRoutes } from "./routes/reports";
 import { auditRoutes } from "./routes/audit";
 import { accountRoutes } from "./routes/accounts";
 import { expenseRoutes } from "./routes/expenses";
+import { cashFlowRoutes } from "./routes/cashFlow";
 import { requireAuth } from "./middleware/auth";
 import { createDb } from "./db";
 import {
@@ -81,6 +82,7 @@ protectedApi.route("/dashboard", dashboardRoutes);
 protectedApi.route("/reports", reportRoutes);
 protectedApi.route("/audit", auditRoutes);
 protectedApi.route("/accounts", accountRoutes);
+protectedApi.route("/cash-flow", cashFlowRoutes);
 protectedApi.route("/expenses", expenseRoutes);
 protectedApi.route("/settings", settingsRoutes);
 protectedApi.route("/catalog", catalogRoutes);

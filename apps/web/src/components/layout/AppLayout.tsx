@@ -18,6 +18,7 @@ import {
   ShieldAlert,
   Wallet,
   Receipt,
+  TrendingUp,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
@@ -41,6 +42,7 @@ export function AppLayout() {
     { name: "Suppliers", path: "/suppliers", icon: Truck },
     ...(isOwner
       ? [
+          { name: "Cash Flow", path: "/cash-flow", icon: TrendingUp },
           { name: "Reports", path: "/reports", icon: BarChart3 },
           { name: "Audit Logs", path: "/audit", icon: ShieldAlert },
           { name: "Settings", path: "/settings", icon: Settings },
@@ -190,6 +192,16 @@ export function AppLayout() {
               <Truck className="w-4 h-4 text-amber-400" />
               <span>Suppliers</span>
             </Link>
+            {isOwner && (
+              <Link
+                to="/cash-flow"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center space-x-2 p-2 rounded-lg text-xs text-slate-300 hover:bg-slate-700"
+              >
+                <TrendingUp className="w-4 h-4 text-emerald-400" />
+                <span>Cash Flow</span>
+              </Link>
+            )}
             {isOwner && (
               <Link
                 to="/reports"

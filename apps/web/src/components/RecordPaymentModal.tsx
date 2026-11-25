@@ -51,8 +51,8 @@ export function RecordPaymentModal({
         firstAcc.type === "cash"
           ? "cash"
           : firstAcc.type === "bank"
-          ? "bank_transfer"
-          : "other"
+            ? "bank_transfer"
+            : "other"
       );
     }
   }, [activeAccounts, accountId]);
@@ -65,8 +65,8 @@ export function RecordPaymentModal({
         acc.type === "cash"
           ? "cash"
           : acc.type === "bank"
-          ? "bank_transfer"
-          : "other"
+            ? "bank_transfer"
+            : "other"
       );
     }
   };
