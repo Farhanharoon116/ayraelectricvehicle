@@ -9,14 +9,14 @@ assets = { directory = "../web/dist", binding = "ASSETS", not_found_handling = "
 # Database binding for D1
 [[d1_databases]]
 binding = "DB"
-database_name = "aev-db-dev"
-database_id = "aev-db-dev-id"
+database_name = "aev-db-prod"
+database_id = "154f3719-7ee2-4266-8adf-00dd52a471ae"
 migrations_dir = "drizzle"
 
 # R2 bucket binding for CNIC photos and exports
 [[r2_buckets]]
 binding = "DOCUMENTS"
-bucket_name = "aev-documents-dev"
+bucket_name = "aev-documents-prod"
 
 # Cron Triggers
 # 1. Daily at 00:05 PKT (19:05 UTC): Daily installment-due & fine computation
@@ -55,7 +55,7 @@ name = "aev-api-prod"
 [[env.production.d1_databases]]
 binding = "DB"
 database_name = "aev-db-prod"
-database_id = "aev-db-prod-id"
+database_id = "154f3719-7ee2-4266-8adf-00dd52a471ae"
 migrations_dir = "drizzle"
 
 [[env.production.r2_buckets]]

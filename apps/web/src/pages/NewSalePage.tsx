@@ -465,11 +465,11 @@ export function NewSalePage() {
         notes: notes.trim() || undefined,
         payments: downPaymentAmount > 0
           ? downPaymentRows.map((r) => ({
-              accountId: r.accountId,
-              amount: r.amount,
-              paymentMethod: r.paymentMethod,
-              reference: r.reference.trim() || undefined,
-            }))
+            accountId: r.accountId,
+            amount: r.amount,
+            paymentMethod: r.paymentMethod,
+            reference: r.reference.trim() || undefined,
+          }))
           : [],
         installmentPlan: {
           durationMonths,
@@ -480,11 +480,11 @@ export function NewSalePage() {
           guarantor:
             settings?.guarantorEnabled
               ? {
-                  name: guarantorName.trim(),
-                  cnic: guarantorCnic.trim(),
-                  phone: guarantorPhone.trim(),
-                  address: guarantorAddress.trim(),
-                }
+                name: guarantorName.trim(),
+                cnic: guarantorCnic.trim(),
+                phone: guarantorPhone.trim(),
+                address: guarantorAddress.trim(),
+              }
               : undefined,
         },
       });
@@ -515,13 +515,12 @@ export function NewSalePage() {
           return (
             <div key={label} className="flex items-center gap-1.5">
               <div
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  active
-                    ? "bg-brand-600 text-white"
-                    : done
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${active
+                  ? "bg-brand-600 text-white"
+                  : done
                     ? "bg-emerald-100 text-emerald-700"
                     : "bg-slate-100 text-slate-400"
-                }`}
+                  }`}
               >
                 <span>{s}</span>
                 <span className="hidden sm:inline">{label}</span>
@@ -573,11 +572,10 @@ export function NewSalePage() {
                     <div
                       key={c.id}
                       onClick={() => setSelectedCustomerId(c.id)}
-                      className={`p-2.5 rounded-xl border text-xs cursor-pointer transition-all flex items-center justify-between ${
-                        selectedCustomerId === c.id
-                          ? "bg-brand-50/70 border-brand-500 text-brand-900"
-                          : "bg-white border-slate-200 hover:bg-slate-50 text-slate-700"
-                      }`}
+                      className={`p-2.5 rounded-xl border text-xs cursor-pointer transition-all flex items-center justify-between ${selectedCustomerId === c.id
+                        ? "bg-brand-50/70 border-brand-500 text-brand-900"
+                        : "bg-white border-slate-200 hover:bg-slate-50 text-slate-700"
+                        }`}
                     >
                       <div>
                         <span className="font-bold">{c.name}</span>
@@ -644,11 +642,10 @@ export function NewSalePage() {
                 <div
                   key={u.id}
                   onClick={() => handleUnitSelect(u)}
-                  className={`p-3 rounded-xl border text-xs cursor-pointer transition-all flex flex-col justify-between ${
-                    selectedUnitId === u.id
-                      ? "bg-brand-50/70 border-brand-500 text-brand-900 shadow-sm"
-                      : "bg-white border-slate-200 hover:bg-slate-50 text-slate-700"
-                  }`}
+                  className={`p-3 rounded-xl border text-xs cursor-pointer transition-all flex flex-col justify-between ${selectedUnitId === u.id
+                    ? "bg-brand-50/70 border-brand-500 text-brand-900 shadow-sm"
+                    : "bg-white border-slate-200 hover:bg-slate-50 text-slate-700"
+                    }`}
                 >
                   <div>
                     <div className="flex items-center justify-between">
@@ -781,22 +778,20 @@ export function NewSalePage() {
               <button
                 type="button"
                 onClick={() => setSaleType("full_payment")}
-                className={`flex-1 py-2.5 rounded-xl text-xs font-bold border-2 transition-all ${
-                  saleType === "full_payment"
-                    ? "bg-brand-600 border-brand-600 text-white"
-                    : "bg-white border-slate-300 text-slate-600 hover:border-brand-400"
-                }`}
+                className={`flex-1 py-2.5 rounded-xl text-xs font-bold border-2 transition-all ${saleType === "full_payment"
+                  ? "bg-brand-600 border-brand-600 text-white"
+                  : "bg-white border-slate-300 text-slate-600 hover:border-brand-400"
+                  }`}
               >
                 💵 Full Payment
               </button>
               <button
                 type="button"
                 onClick={() => setSaleType("installment")}
-                className={`flex-1 py-2.5 rounded-xl text-xs font-bold border-2 transition-all ${
-                  saleType === "installment"
-                    ? "bg-brand-600 border-brand-600 text-white"
-                    : "bg-white border-slate-300 text-slate-600 hover:border-brand-400"
-                }`}
+                className={`flex-1 py-2.5 rounded-xl text-xs font-bold border-2 transition-all ${saleType === "installment"
+                  ? "bg-brand-600 border-brand-600 text-white"
+                  : "bg-white border-slate-300 text-slate-600 hover:border-brand-400"
+                  }`}
               >
                 📅 Installment Plan
               </button>
@@ -831,11 +826,10 @@ export function NewSalePage() {
                         key={d}
                         type="button"
                         onClick={() => setDurationMonths(d)}
-                        className={`px-4 py-2 rounded-full text-xs font-bold border-2 transition-all ${
-                          durationMonths === d
-                            ? "bg-brand-600 border-brand-600 text-white"
-                            : "bg-white border-slate-300 text-slate-600 hover:border-brand-400"
-                        }`}
+                        className={`px-4 py-2 rounded-full text-xs font-bold border-2 transition-all ${durationMonths === d
+                          ? "bg-brand-600 border-brand-600 text-white"
+                          : "bg-white border-slate-300 text-slate-600 hover:border-brand-400"
+                          }`}
                       >
                         {d} months
                       </button>
@@ -1040,8 +1034,8 @@ export function NewSalePage() {
                 {createSaleMutation.isPending
                   ? "Processing..."
                   : saleType === "installment"
-                  ? "Confirm Installment Sale"
-                  : "Confirm Full Payment"}
+                    ? "Confirm Installment Sale"
+                    : "Confirm Full Payment"}
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>

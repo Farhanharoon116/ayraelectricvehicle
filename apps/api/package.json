@@ -7,8 +7,8 @@
     "deploy:dev": "wrangler deploy --env dev",
     "deploy:prod": "wrangler deploy --env production",
     "db:generate": "drizzle-kit generate",
-    "db:migrate:local": "wrangler d1 migrations apply aev-db --local",
-    "db:migrate:prod": "wrangler d1 migrations apply aev-db --remote",
+    "db:migrate:local": "wrangler d1 migrations apply aev-db-prod --local",
+    "db:migrate:prod": "wrangler d1 migrations apply aev-db-prod --remote",
     "db:seed:local": "tsx src/scripts/seed.ts --local",
     "typecheck": "tsc --noEmit"
   },
